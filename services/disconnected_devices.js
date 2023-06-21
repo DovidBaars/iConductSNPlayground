@@ -36,11 +36,12 @@ module.exports = {
     getCsvFile: async () => {
         const results = [];
         return await new Promise((resolve, reject) => {
-            fs.createReadStream('./csv/ext_test.csv')
+            // fs.createReadStream('./csv/EXT_DEVICES_06_20.csv')
+            // fs.createReadStream('./csv/test.csv')
               .pipe(csv())
               .on('data', (data) => results.push(data))
               .on('end', () => {
-                // console.log('end', results)
+                console.log('end', results)
                 resolve(results);
               })
               .on('error', (error) => {
@@ -49,11 +50,10 @@ module.exports = {
           });
     },
     startProcess: async (fileData) => {
-
+    console.log('startProcess')
         for(let obj of fileData){
-            console.log(obj.IMEI, obj.email)
-            //await deleteProvisioning(obj.TYPE, obj.provisioning_id) //('gsm_scale','7CefBi');
-            //await addProvisioning(obj.TYPE, obj.email,obj.IMEI) //('gsm_scale', 'nitzanv+cfhc130821@mydario.com', 'gsmScaleAutoTest08') 
+            await deleteProvisioning(obj.TYPE, obj.PROVISIONING_ID) //('gsm_scale','7CefBi');
+            await addProvisioning(obj.TYPE, obj.EMAIL,obj.IMEI) //('gsm_scale', 'nitzanv+cfhc130821@mydario.com', 'gsmScaleAutoTest08')
         }
 
         console.log('deleteProvError',deleteProvError)
@@ -74,23 +74,29 @@ module.exports = {
 
 async function deleteProvisioning(productType, provisioningId){
     try{
+        if (Object.keys(devicesData).includes(productType) === false) {
+            console.log('productType not found', productType);
+            return false;
+        }
         console.log('deleteProvisioning', productType, provisioningId, `Basic ${devicesData[productType].authorization}`);
-        
+
         const response = await axios.delete(`https://api.dariocare.com/provisioning/${provisioningId}`, {
             responseType: 'json',
-            headers: { 
-                'Authorization': `Basic ${devicesData[productType].authorization}`, 
+            headers: {
+                'Authorization': `Basic ${devicesData[productType].authorization}`,
                 'Content-Type': 'application/json'
               }
           });
-      
+
           const data = response.data;
           if(data.status != 200){
             deleteProvError.push({data,productType, provisioningId})
+              return false
           }
           console.log('data', data)
     } catch(error){
-        console.log(error);
+        console.log('catch', error);
+        return false
     }
 }
 
@@ -111,16 +117,16 @@ async function addProvisioning(productType, email, IMEI){
         //console.log('data', data)
 
         const response = await axios.post(
-            `https://api.dariocare.com/provisioning/`, 
-            data, 
-            { headers: { 
-                'Authorization': `Basic ${devicesData[productType].authorization}`, 
+            `https://api.dariocare.com/provisioning/`,
+            data,
+            { headers: {
+                'Authorization': `Basic ${devicesData[productType].authorization}`,
                 'Content-Type': 'application/json'
             }}
         );
-      
+
           const res = response.data;
-          if(res.status != 200){
+          if(res.status != 201){
             addProvError.push({res,productType, email})
           }
           console.log('res', res)
